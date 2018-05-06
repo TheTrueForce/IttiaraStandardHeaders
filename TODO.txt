@@ -1,0 +1,4 @@
+- Refactor SerialGLCDlib to go through DUARTlib, instead of directly tweaking registers.
+- Add blocking versions of DUART.INx and DUART.OUTx(append a B to the new names).
+- Update SerialGLCDlib to use the features of the new display firmware.
+- Possibly split the AAROM routines out of SPIlib.
