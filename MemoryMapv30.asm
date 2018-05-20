@@ -2,9 +2,9 @@
 
 ;Overall memory map; Base addresses of hardware
 RAM		= $0000
-DUART	= $7FD0
-VIA		= $7FE0
-SPI		= $7FF0
+DUART	= $5000
+VIA		= $6000
+SPI		= $7000
 ROM		= $8000
 
 VECTORS	= $FFFA
@@ -14,7 +14,7 @@ SCRATCH1 = $00
 SCRATCH2 = $01
 SCRATCH3 = $02
 SCRATCH4 = $03
-SCARTCH5 = $04
+SCRATCH5 = $04
 
 ;Useful values
 FILL_VAL = $FF
