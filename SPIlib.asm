@@ -1,9 +1,19 @@
 ;Routines for easily controlling the 65SPI and certain SPI peripherals
 
 ;SPI configuration:
-MASK_MODE = %11111100
+MASK_MODE	= %11111100
 
-INIT_SPI:
+;SPI constants
+SPI_TxDone 	= %10000000
+SPI_IRQen	= %01000000
+SPI_Busy 	= %00100000
+SPI_FastRx	= %00010000
+SPI_HiZMOSI = %00001000
+SPI_ExtClk	= %00000100
+SPI_CPOL	= %00000010
+SPI_CPHA	= %00000001
+
+SPI.Init:
 	LDA #$FF
 	STA SPI.SSR		;deassert slave selects
 	STZ SPI.CONTROL
@@ -12,8 +22,8 @@ INIT_SPI:
 
 ;Mode number in A. Only the bottom two bits may be set, or crazies may occur.
 ;Disturbs SCRATCH1 and the N flag
-SET_MODE:
-	STA SCRATCH1	;save the mode for later. We can't use it from a register or the stack anyway.
+SPI.SetMode:
+	STA SCRATCH1	;save the mode for later. We can't use it from a register or the stack, so it must go in memory.
 	LDA #MASK_MODE
 	AND SPI.CONTROL	;remove the existing mode
 	ORA SCRATCH1	;substitute in the new one.
@@ -21,13 +31,23 @@ SET_MODE:
 	RTS
 
 ;transmits the byte in A and receives one to A.
-TRxBYTE:
+SPI.TRxByte:
 	STA SPI.DATA	;Shift out the byte
-.waitTRx:
-	LDA SPI.STATUS	;wait for it to complete
-	BPL .waitTRx
+	JSR WaitTRx
 	LDA SPI.DATA	;get the received byte
 	RTS
+	
+SPI.TxByte:
+	STA SPI.DATA
+	JSR WaitTRx
+	RTS
+
+SPI.WaitTRx:
+	LDA SPI.STATUS
+	AND SPI_Busy	;mask out all but the BSY bit.
+	BNE WaitTRx		;if that bit is set, the 65SPI is not ready for another byte.
+	RTS
+	
 	
 SPI.SelectSlave:
 ;Disturbs: SCRATCH1
@@ -86,7 +106,7 @@ AAROM_DPD   = $B9
 ;Disturbs:	SCRATCH5, Y, A
 ;Data is copied to RAM starting at the address specified in SCRATCH3 and 4.
 ;This routine does not handle the select signal
-AA_READ:
+SPI.AA_READ:
 	LDA #AAROM_READ
 	JSR TRxBYTE		;Send Command
 	LDA SCRATCH2
@@ -113,7 +133,7 @@ AA_READ:
 ;It is assumed that the appropriate select signal has been set, and that
 ;the write-protect has been disabled.
 ;Writing across a mod-128 byte boundary is impossible with the 25AA512.
-AA_WRITE:
+SPI.AA_WRITE:
 	LDA #AAROM_WRITE
 	JSR TRxBYTE			;Write command
 	LDA SCRATCH2
@@ -132,7 +152,7 @@ AA_WRITE:
 	
 	RTS
 
-AA_WREN:
+SPI.AA_WREN:
 ;Disturbs: None
 ;Parameters: None
 ;Returns: Nothing

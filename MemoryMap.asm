@@ -14,10 +14,11 @@ SCRATCH1 = $00
 SCRATCH2 = $01
 SCRATCH3 = $02
 SCRATCH4 = $03
-SCARTCH5 = $04
+SCRATCH5 = $04
 
 ;Useful values
 FILL_VAL = $FF
+PHASE_2_FREQ  = 1000000		;System Clock speed
 
 ;DUART registers
 DUART.MRA		= DUART
@@ -47,7 +48,6 @@ DUART.ROPR		= DUART+$F	;reset output bits (write only)
 DUART.STOP_CT	= DUART+$F	;stop counter/timer command(triggers on read)
 
 ;VIA registers
-VIA			= $6000
 VIA.IORB	= VIA
 VIA.IORA	= VIA+1
 VIA.DDRB	= VIA+2
@@ -66,7 +66,6 @@ VIA.IER		= VIA+$E
 VIA.IORANS	= VIA+$F
 
 ;65SPI registers
-SPI			= $7000
 SPI.DATA	= SPI
 SPI.CONTROL	= SPI+1	;the control reg is basically the status reg, except that certain bits cannot be written to.
 SPI.STATUS	= SPI+1
