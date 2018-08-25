@@ -33,19 +33,19 @@ SPI.SetMode:
 ;transmits the byte in A and receives one to A.
 SPI.TRxByte:
 	STA SPI.DATA	;Shift out the byte
-	JSR WaitTRx
+	JSR SPI.WaitTRx
 	LDA SPI.DATA	;get the received byte
 	RTS
 	
 SPI.TxByte:
 	STA SPI.DATA
-	JSR WaitTRx
+	JSR SPI.WaitTRx
 	RTS
 
 SPI.WaitTRx:
 	LDA SPI.STATUS
 	AND SPI_Busy	;mask out all but the BSY bit.
-	BNE WaitTRx		;if that bit is set, the 65SPI is not ready for another byte.
+	BNE SPI.WaitTRx		;if that bit is set, the 65SPI is not ready for another byte.
 	RTS
 	
 	
@@ -108,16 +108,16 @@ AAROM_DPD   = $B9
 ;This routine does not handle the select signal
 SPI.AA_READ:
 	LDA #AAROM_READ
-	JSR TRxBYTE		;Send Command
+	JSR SPI.TRxBYTE		;Send Command
 	LDA SCRATCH2
-	JSR TRxBYTE		;Send high byte of source address
+	JSR SPI.TRxBYTE		;Send high byte of source address
 	LDA SCRATCH1
-	JSR TRxBYTE		;Send low byte of source address
+	JSR SPI.TRxBYTE		;Send low byte of source address
 	STY SCRATCH5	;The usual 6502-ism is to start at the count required and
 	LDY #$00		;decrement to 0. The 25AAxxx chips start at the given
 					;address and increments, so we must do the same.
 .LoopTop:
-	JSR TRxBYTE
+	JSR SPI.TRxBYTE
 	STA (SCRATCH3),Y	;Retrieve and store one byte.
 	INY
 	CPY SCRATCH5	;Have we copied all we need to?
@@ -135,17 +135,17 @@ SPI.AA_READ:
 ;Writing across a mod-128 byte boundary is impossible with the 25AA512.
 SPI.AA_WRITE:
 	LDA #AAROM_WRITE
-	JSR TRxBYTE			;Write command
+	JSR SPI.TRxBYTE			;Write command
 	LDA SCRATCH2
-	JSR TRxBYTE			;Write Address
+	JSR SPI.TRxBYTE			;Write Address
 	LDA SCRATCH1
-	JSR TRxBYTE
+	JSR SPI.TRxBYTE
 	STX SCRATCH5		;Save Y so we 
 	LDX #00
 	
 .LoopTop
 	LDA (SCRATCH3),Y
-	JSR TRxBYTE			;Send one byte
+	JSR SPI.TRxBYTE			;Send one byte
 	INY
 	CPY SCRATCH5		;If zero, we are done
 	BMI .LoopTop
@@ -159,6 +159,6 @@ SPI.AA_WREN:
 ;Enables writing to the EEPROM. Must be called before any write will stick.
 	PHA
 	LDA #AAROM_WREN
-	JSR TRxByte
+	JSR SPI.TRxByte
 	PLA
 	RTS
