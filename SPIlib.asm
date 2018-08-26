@@ -36,10 +36,13 @@ SPI.TRxByte:
 	JSR SPI.WaitTRx
 	LDA SPI.DATA	;get the received byte
 	RTS
-	
+
+;Transmits byte in A.
 SPI.TxByte:
+	PHA
 	STA SPI.DATA
 	JSR SPI.WaitTRx
+	PLA
 	RTS
 
 SPI.WaitTRx:
