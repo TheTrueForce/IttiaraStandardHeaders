@@ -47,8 +47,7 @@ SPI.TxByte:
 
 SPI.WaitTRx:
 	LDA SPI.STATUS
-	AND SPI_Busy	;mask out all but the BSY bit.
-	BNE SPI.WaitTRx		;if that bit is set, the 65SPI is not ready for another byte.
+	BPL SPI.WaitTRx		;TC is bit 7 - if set, shift complete.
 	RTS
 	
 	
