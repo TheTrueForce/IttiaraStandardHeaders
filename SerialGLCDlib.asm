@@ -12,7 +12,7 @@ LCD_CmdBox = $0F
 LCD_CmdBlkErase = $05
 
 ;11 bytes
-CLS:
+GLCD.CLS:
 	PHA
 	LDA #LCD_CtrlCode
 	STA DUART.FIFOA
@@ -21,7 +21,7 @@ CLS:
 	RTS
 
 ;13 bytes
-RVS_toggle:
+GLCD.RVS_toggle:
 	PHA
 	LDA #LCD_CtrlCode
 	STA DUART.FIFOA
@@ -32,7 +32,7 @@ RVS_toggle:
 
 ;11 bytes
 ;Expects the duty cycle(0-100; $00-$63) to be in A.
-SetDutyCycle:
+GLCD.SetDutyCycle:
 	PHX
 	LDX #LCD_CtrlCode
 	STX DUART.FIFOA
@@ -42,7 +42,7 @@ SetDutyCycle:
 
 ;Expects the X offset in A
 ;16 bytes
-SetXOffs:
+GLCD.SetXOffs:
 	PHX
 	LDX #LCD_CtrlCode
 	STX DUART.FIFOA
@@ -54,7 +54,7 @@ SetXOffs:
 
 ;Expects the Y offset in A
 ;16 bytes
-SetYOffs:
+GLCD.SetYOffs:
 	PHX
 	LDX #LCD_CtrlCode
 	STX DUART.FIFOA
@@ -66,7 +66,7 @@ SetYOffs:
 
 ;Expects Xpos on X and Ypos in Y. Sets pixel if CS, Clears it if CC. Clears Carry.
 ;25 bytes
-Pset:
+GLCD.Pset:
 	PHA
 	LDA #LCD_CtrlCode
 	STA DUART.FIFOA
@@ -83,7 +83,7 @@ Pset:
 ; Expects x1 in $00,X, x2 in $01,X, y1 in $00,Y, and y2 in $01,Y.
 ; Sets line if CS, Clears line if CC, Clears Carry.
 ; 41 bytes
-DrawLine:
+GLCD.DrawLine:
 	PHA
 	LDA #LCD_CtrlCode
 	STA DUART.FIFOA
@@ -106,7 +106,7 @@ DrawLine:
 ; Expects x1 in $00,X, x2 in $01,X, y1 in $00,Y, and y2 in $01,Y.
 ; Sets line if CS, Clears line if CC, Clears Carry.
 ; 41 bytes
-DrawBox:
+GLCD.DrawBox:
 	PHA
 	LDA #LCD_CtrlCode
 	STA DUART.FIFOA
@@ -128,7 +128,7 @@ DrawBox:
 
 ; Expects x1 in $00,X, x2 in $01,X, y1 in $00,Y, and y2 in $01,Y.
 ; 35 bytes
-EraseBlock:
+GLCD.EraseBlock:
 	PHA
 	LDA #LCD_CtrlCode
 	STA DUART.FIFOA
@@ -148,7 +148,7 @@ EraseBlock:
 ; Expects x in X, y in Y, and radius in A
 ; Sets line if CS, clears line if CC, and clears carry.
 ; 24 bytes
-DrawCircle:
+GLCD.DrawCircle:
 	PHA					;save radius
 	LDA #LCD_CtrlCode
 	STA DUART.FIFOA
