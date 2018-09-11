@@ -63,6 +63,7 @@ SPI.SelectSlave:
 	PLA
 	RTS
 	
+	;TODO: This routine produces incorrect results.
 ThreeToEight:
 ;Disturbs: SCRATCH1
 ;		   C
@@ -102,56 +103,143 @@ AAROM_CE    = $C7
 AAROM_RDID  = $AB
 AAROM_DPD   = $B9
 
-;Expects:	16-bit EEPROM address      	in SCRATCH1 & SCRATCH2
-;		 	16-bit destination address	in SCRATCH3 & SCRATCH4 (low-bytes first)
-;		 	# of bytes to read			in Y (not zero-based!, and 0 copies 1B)
-;Disturbs:	SCRATCH5, Y, A
-;Data is copied to RAM starting at the address specified in SCRATCH3 and 4.
-;This routine does not handle the select signal
-SPI.AA_READ:
-	LDA #AAROM_READ
-	JSR SPI.TRxBYTE		;Send Command
-	LDA SCRATCH2
-	JSR SPI.TRxBYTE		;Send high byte of source address
-	LDA SCRATCH1
-	JSR SPI.TRxBYTE		;Send low byte of source address
-	STY SCRATCH5	;The usual 6502-ism is to start at the count required and
-	LDY #$00		;decrement to 0. The 25AAxxx chips start at the given
-					;address and increments, so we must do the same.
-.LoopTop:
-	JSR SPI.TRxBYTE
-	STA (SCRATCH3),Y	;Retrieve and store one byte.
-	INY
-	CPY SCRATCH5	;Have we copied all we need to?
-	BMI	.LoopTop	;If zero, we are done, otherwise we need to copy more.
+AAROM_StagingArea = $7E00	;This is where the AAROM driver puts and gets its data from.
+
+;Disturbs: None
+;Parameters: A 	Slave Mask
+;			 X	Page address
+;Returns: Nothing
+;Reads the given page into the SPI storage Staging Area($7E00 - $7EFF).
+;Handles chip select signal.
+SPI.AA_Read:
+	PHA
+	PHX
 	
+	STA  SPI.SSR	;Select SPI-10 #1
+	
+	LDA #AAROM_Read
+	JSR  SPI.TxByte	;Read command
+	TXA
+	JSR  SPI.TxByte	;Page number
+	LDA #$00
+	JSR  SPI.TxByte	;Low byte == 0
+	
+	LDX #$00
+.loop
+	JSR  SPI.TRxByte
+	STA  AAROM_StagingArea, X
+	INX
+	BNE .loop
+	
+	LDA #$FF
+	STA  SPI.SSR	;Deselect all SPI devices.
+	
+	PLX
+	PLA
 	RTS
 
-;Expects:	16-bit EEPROM address      	in SCRATCH1 & SCRATCH2
-;		 	16-bit source address		in SCRATCH3 & SCRATCH4 (low-bytes first)
-;		 	# of bytes to write			in Y (not zero-based!, and 0 copies 1B)
-;Disturbs:	SCRATCH5, Y, A
-;Data is copied to RAM starting at the address specified in SCRATCH3 and 4.
-;It is assumed that the appropriate select signal has been set, and that
-;the write-protect has been disabled.
-;Writing across a mod-128 byte boundary is impossible with the 25AA512.
-SPI.AA_WRITE:
+;Disturbs: None
+;Parameters: A 	Slave Mask
+;			 X	Page address
+;Returns: Nothing
+;Writes the 256 bytes in the SPI storage Staging Area($7E00 - $7EFF).
+;Handles chip select signal and write-enable.
+
+SPI.AA_Write:
+	PHA
+	PHX
+	
+	STA  SPI.SSR				;Select the SPI device
+	PHA							;Also stack it; we'll need it again.
+	JSR SPI.AA_WREN				;Enable writing
+	LDA #$FF
+	STA  SPI.SSR				;deselect
+	PLA
+	PHA
+	STA  SPI.SSR				;select again
+	
 	LDA #AAROM_WRITE
-	JSR SPI.TRxBYTE			;Write command
-	LDA SCRATCH2
-	JSR SPI.TRxBYTE			;Write Address
-	LDA SCRATCH1
-	JSR SPI.TRxBYTE
-	STX SCRATCH5		;Save Y so we 
-	LDX #00
+	JSR  SPI.TxByte				;Send write command
+	TXA
+	JSR  SPI.TxByte				;Send page address
+	LDA #$00
+	JSR  SPI.TxByte				;Send zero(low EEPROM page)
 	
-.LoopTop
-	LDA (SCRATCH3),Y
-	JSR SPI.TRxBYTE			;Send one byte
-	INY
-	CPY SCRATCH5		;If zero, we are done
-	BMI .LoopTop
+	LDX #$00
+.lowerLoop
+	 LDA  AAROM_StagingArea, X
+	 JSR  SPI.TxByte				;send a byte
+	 INX
+	 CPX #$80
+	BNE .lowerLoop				;If we reach byte $80(copied up to $7F), this loop is complete.
 	
+	LDA #$FF
+	STA  SPI.SSR				;deselect everything
+	
+	;Polling the eeprom's status register is the proper way to do it, but it will be far simpler to simply wait for 5 ms, which is the maximum time a page write takes.
+	JSR  Delay_5ms
+	
+	;Now write the next half.
+	
+	PLA							;retrieve the select pattern
+	PHA
+	STA  SPI.SSR				;Select the EEPROM
+	JSR SPI.AA_WREN				;enable writing again(The write operation before disabled it)
+	LDA #$FF
+	STA  SPI.SSR
+	
+	PLA							;select the EEPROM one last time(it won't be needed again)
+	STA  SPI.SSR				
+	LDA #AAROM_WRITE
+	JSR  SPI.TxByte				;Send write command
+	PLA							;Get the original contents of X(page address) into A
+	PHA
+	JSR  SPI.TxByte				;Send page address
+	LDA #$80
+	JSR  SPI.TxByte				;Send $80(high EEPROM page)
+	
+	LDX #$80
+.upperLoop
+	 LDA  AAROM_StagingArea, X
+	 JSR  SPI.TxByte				;send a byte
+	 INX
+	BNE .upperLoop				;If we reach byte $100(copied up to $FF), this loop is complete.
+	
+.end
+	LDA #$FF
+	STA  SPI.SSR
+	
+	;Wait 5ms for write to complete
+	JSR  Delay_5ms
+	
+	PLX
+	PLA
+	RTS
+
+
+;Calculated for a 1MHz clock frequency. Uses 5001 cycles
+;Any routine of this form will take (2y + 3(y-1) + 4)x + 2x + 2(x-1) + 4 + 12 + 12.
+;The constant fours are the last BNE(where the branch is not taken) and the decrement operation.
+;The constant twelves are the JSR/RTS used to enter the routine, and the stack operations at the beginning and end.
+Delay_5ms:
+	PHX				;3 cycles
+	PHY				;3 cycles
+	
+	;Outer loop uses 4977 cycles. The remaining 24 is in the JSR/RTS and stack ops
+	LDX #$05		;2 cycles
+.outerLoop
+
+		;comes to 991 cycles, which is just under 1ms, but there is other overhead that will pick up the difference.
+		LDY #198		;2 cycles		; - decimal 198
+.innerLoop								;4 + 2y + 3(y-1) cycles
+		DEY				;2y cycles		;
+		BNE .innerLoop	;3y-1 + 2 cycles; - 3y for branches taken, 2 for exit.
+	
+	DEX				;2x cycles
+	BNE .outerLoop	;2x-1 + 2 cycles
+	
+	PLY				;3 cycles
+	PLX				;3 cycles
 	RTS
 
 SPI.AA_WREN:
@@ -161,6 +249,6 @@ SPI.AA_WREN:
 ;Enables writing to the EEPROM. Must be called before any write will stick.
 	PHA
 	LDA #AAROM_WREN
-	JSR SPI.TRxByte
+	JSR SPI.TxByte
 	PLA
 	RTS
