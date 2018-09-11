@@ -119,7 +119,8 @@ SPI.AA_Read:
 	
 	LDA #AAROM_Read
 	JSR  SPI.TxByte	;Read command
-	TXA
+	PLA
+	PHA
 	JSR  SPI.TxByte	;Page number
 	LDA #$00
 	JSR  SPI.TxByte	;Low byte == 0
