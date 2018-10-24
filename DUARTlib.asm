@@ -166,8 +166,7 @@ DUART.INA:
 ;Gets a byte from serial port A, if present.
 	PHA
 	LDA DUART.SRA
-	AND #DUART_RxRDY		;Determine whether or not there is a character to receive.
-	LSR
+	LSR		;Determine whether or not there is a character to receive.
 	PLA
 	BCC .out
 	LDA DUART.FIFOA
@@ -181,10 +180,9 @@ DUART.OUTA:
 ;Pushes a byte out serial port A, if it can be done. If it cannot be sent, then returns with carry clear.
 	PHA					;get A out of the way, so we can use it.
 	LDA DUART.SRA
-	AND #DUART_TxRDY			;get the TxRDY bit.
 	LSR
 	LSR
-	LSR					;put that bit in the carry. It will provide the return value.
+	LSR					;put TxRDY in the carry. It will provide the return value.
 	PLA
 	BCC .out
 	STA DUART.FIFOA		;send the byte
@@ -199,8 +197,7 @@ DUART.INB:
 ;Gets a byte from serial port B, if present.
 	PHA
 	LDA DUART.SRB
-	AND #DUART_RxRDY		;Determine whether or not there is a character to receive.
-	LSR
+	LSR		;Determine whether or not there is a character to receive.
 	PLA
 	BCC .out
 	LDA DUART.FIFOB
@@ -214,10 +211,9 @@ DUART.OUTB:
 ;Pushes a byte out serial portB, if it can be done. If it cannot be sent, then returns with carry clear.
 	PHA					;get A out of the way, so we can use it.
 	LDA DUART.SRB
-	AND #DUART_TxRDY			;get the TxRDY bit.
 	LSR
 	LSR
-	LSR					;put that bit in the carry. It will provide the return value.
+	LSR					;put TxRDY in the carry. It will provide the return value.
 	PLA
 	BCC .out
 	STA DUART.FIFOB		;send the byte

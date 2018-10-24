@@ -7,7 +7,9 @@ MEMCPY:
 	LDA ($00),Y
 	STA ($02),Y
 	DEY
-	BMI MEMCPY
+	BNE MEMCPY		;loop until Y=0, then copy the byte the loop didn't get.
+	LDA ($00),Y
+	STA ($02),Y
 	RTS
 
 ;Copies a block of memory to ROM. This cannot run from the ROM, as it goes
@@ -23,7 +25,9 @@ ROMCPY:
 	NOP
 	NOP
 	DEY
-	BMI CPY2ROM
+	BNE CPY2ROM
+	LDA ($00),Y		;loop until Y=0, then copy the byte the loop didn't get.
+	STA ($02),Y
 	RTS
 ROMCPYEND:
 

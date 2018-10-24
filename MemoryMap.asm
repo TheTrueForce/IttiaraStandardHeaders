@@ -15,6 +15,7 @@ SCRATCH2 = $01
 SCRATCH3 = $02
 SCRATCH4 = $03
 SCRATCH5 = $04
+AAROM_StagingArea = $7E00
 
 ;Useful values
 FILL_VAL = $FF
